@@ -1,0 +1,142 @@
+---
+title: "R - MongoDB"
+author: "Stamatis Pitsios"
+date: "April 27, 2016"
+output: html_document
+---
+
+## Question 1
+```{r}
+# Install MongoDB connector.
+# install.packages("rmongodb")
+
+# Load MongoDB connector.
+library(rmongodb)
+```
+
+## Question 2
+```{r}
+# Create a connection with MongoDB
+mongo <- mongo.create()
+```
+
+## Question 3
+```{r}
+# Check if the connection with MongoDB is active.
+mongo.is.connected(mongo)
+```
+
+## Question 4
+```{r}
+# Create namespace string.
+namespace <- paste("r", "lab2", sep = ".")
+```
+
+## Question 5
+```{r}
+# Create a JSON object.
+personJSON <- '{"name": "Cristiano", "language": "Portuguese"}'
+```
+
+## Question 6
+```{r}
+# Attempt to instert an object into MongoDB.
+ok <- mongo.insert(mongo, namespace, mongo.bson.from.JSON(personJSON))
+
+# Check if insert was sucessful.
+ok
+```
+
+## Question 7
+```{r}
+Ioanna <- mongo.bson.from.list(list(name = "Ioanna", language = "English", age = 34))
+Dimitris <- mongo.bson.from.list(list(name = "Dimitris", language = "Greek", age = 29))
+```
+
+## Question 8
+```{r}
+# Insert Ioanna document from question 7.
+ok <- mongo.insert(mongo, namespace, Ioanna)
+ok
+
+# And now insert Dimitris document.
+ok <- mongo.insert(mongo, namespace, Dimitris)
+ok
+```
+
+## Question 9
+```{r}
+# Update Cristiano document and set his age into 26.
+ok <- mongo.update(mongo, namespace, '{"name": "Cristiano"}', '{"name": "Cristiano", "language": "Portuguese", "age": 26}')
+ok
+```
+
+## Question 10
+```{r}
+# Remove Dimitris document from the database.
+ok <- mongo.remove(mongo, namespace, '{"name": "Dimitris"}')
+ok
+```
+
+## Question 11
+```{r}
+# Add more people into the database
+ok <- mongo.insert(mongo, namespace, mongo.bson.from.list(list(name = "Stamatis", language = "Greek", age = 23)))
+ok
+
+ok <- mongo.insert(mongo, namespace, mongo.bson.from.list(list(name = "Rafail", language = "Greek", age = 21)))
+ok
+
+ok <- mongo.insert(mongo, namespace, mongo.bson.from.list(list(name = "Mario", language = "Italian", age = 58)))
+ok
+
+# Extract all people from MongoDB into an R dataframe.
+cursor <- mongo.find(mongo, namespace)
+current_row_number <- 0
+
+names = c()
+ages = c()
+languages = c()
+
+while(mongo.cursor.next(cursor)) {
+  current_row_number <- current_row_number + 1
+  current_row <- mongo.cursor.value(cursor)
+  
+  names[current_row_number] <- mongo.bson.value(current_row, "name")
+  ages[current_row_number] <- mongo.bson.value(current_row, "age")
+  languages[current_row_number] <- mongo.bson.value(current_row, "language")
+}
+
+people <- data.frame(Name = names, Age = ages, Language = languages)
+people
+
+# An alternative way to do the above with an already existing function.
+people <- mongo.cursor.to.data.frame(mongo.find(mongo, namespace))
+people
+```
+
+## Question 12
+```{r}
+# Install package ncvreg that contains the "heart" data frame.
+# install.packages("ncvreg")
+library(ncvreg)
+library(jsonlite)
+
+# Function that stores the contents of the "heart" dataframe into MongoDB.
+save_heart_data_to_mongo <- function(df, namespace) {
+  for (i in 1: nrow(df)) {
+    dataRow <- toJSON(df[i, ])[1]
+    mongo.insert(mongo, namespace, mongo.bson.from.JSON(substr(dataRow, 2, nchar(dataRow) - 1)))
+  }
+}
+
+# Call the function above.
+data(heart)
+save_heart_data_to_mongo(heart, "r.heart")
+```
+
+## Question 13
+```{r}
+# Close MongoDB connection.
+mongo.destroy(mongo)
+```

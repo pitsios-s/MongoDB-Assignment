@@ -1,0 +1,35 @@
+# Load data into MongoDB
+load("/home/stamatis/Desktop/MongoDB/prep.js");
+
+# Open "test" database
+use test;
+
+# Find the number of students that are currently taking at least 1 class.
+db.students.find(
+    {"courses.course_status": "In Progress"}
+).count();
+
+# Count how many students are enrolled from each city.
+db.students.aggregate(
+    { $group: { _id: "$home_city", num_of_students: { $sum: 1 } } }
+);
+
+# Find the most popular hobby/hobbies
+db.students.aggregate(
+    { $unwind: "$hobbies" },
+    { $group: { _id: "$hobbies", num_of_students: { $sum: 1 } } },
+    { $group: { _id: "$num_of_students", hobbies: { $addToSet: "$_id" } } },
+    { $sort: { _id: -1} },
+    { $limit: 1},
+    { $project: { _id: 0, hobbies:1 } }
+);
+
+# Find the GPA of the best student.
+db.students.aggregate(
+    { $match: { "courses.course_status": { $nin: ["In Progress", "Dropped"] } } },
+    { $group: { _id: "$_id", "Grades": { $addToSet: "$courses.grade" } } },
+    { $unwind: "$Grades" },
+    { $project: {Highest_GPA: { $avg: "$Grades" }, _id: 0  } },
+    { $sort: { Highest_GPA: -1} },
+    { $limit: 1 }
+);
