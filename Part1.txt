@@ -1,35 +1,116 @@
-# Load data into MongoDB
+// Load data into MongoDB
 load("/home/stamatis/Desktop/MongoDB/prep.js");
 
-# Open "test" database
+// Open "test" database
 use test;
 
-# Find the number of students that are currently taking at least 1 class.
+// QUERY 1 - Find the number of students that are currently taking at least 1 class.
 db.students.find(
     {"courses.course_status": "In Progress"}
 ).count();
 
-# Count how many students are enrolled from each city.
+// QUERY 2 - Count how many students are enrolled from each city.
 db.students.aggregate(
     { $group: { _id: "$home_city", num_of_students: { $sum: 1 } } }
 );
 
-# Find the most popular hobby/hobbies
+// QUERY 3 - Find the most popular hobby/hobbies
 db.students.aggregate(
     { $unwind: "$hobbies" },
-    { $group: { _id: "$hobbies", num_of_students: { $sum: 1 } } },
-    { $group: { _id: "$num_of_students", hobbies: { $addToSet: "$_id" } } },
-    { $sort: { _id: -1} },
+    { $group: { "_id": "$hobbies", "num_of_students": { $sum: 1 } } },
+    { $group: { "_id": "$num_of_students", "hobbies": { $addToSet: "$_id" } } },
+    { $sort: { "_id": -1} },
     { $limit: 1},
-    { $project: { _id: 0, hobbies:1 } }
+    { $project: { "_id": 0, "hobbies": 1 } }
 );
 
-# Find the GPA of the best student.
+// QUERY 4 - Find the GPA of the best student.
 db.students.aggregate(
-    { $match: { "courses.course_status": { $nin: ["In Progress", "Dropped"] } } },
-    { $group: { _id: "$_id", "Grades": { $addToSet: "$courses.grade" } } },
-    { $unwind: "$Grades" },
-    { $project: {Highest_GPA: { $avg: "$Grades" }, _id: 0  } },
-    { $sort: { Highest_GPA: -1} },
+    { $unwind: "$courses" },
+    { $match: { "courses.course_status": "Complete"} },
+    { $group: { "_id": "$_id", "GPA": { $avg: "$courses.grade" } } },
+    { $project: {"Highest GPA": "$GPA", "_id": 0  } },
+    { $sort: { "Highest GPA": -1} },
     { $limit: 1 }
+);
+
+// An alternative of the above is the following.
+db.students.aggregate(
+    { $project: { "GPA": { $avg: "$courses.grade" }, "_id": 0} },
+    { $sort: { "GPA": -1 } },
+    { $limit: 1 }
+);
+
+// QUERY 5 - Find the student with the largest number of 10's.
+db.students.aggregate(
+    { $project: { "_id": 1, "first_name": 1, "courses": 1 } },
+    { $unwind: "$courses" },
+    { $match: { "courses.grade": 10 } },
+    { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": {$first: "$first_name"} } },
+    { $sort: { "tens": -1 } },
+    { $limit: 1 },
+    { $project: { "_id": 1, "First Name": "$first_name" } }
+);
+
+// QUERY 6 - Find the class with the highest average GPA.
+db.students.aggregate(
+    { $project: { "courses": 1 } },
+    { $unwind: "$courses" },
+    { $match: { "courses.course_status": "Complete" } },
+    { $group: { "_id": "$courses.course_title", "GPA": { $avg: "$courses.grade" } } },
+    { $sort: { "GPA": -1 } },
+    { $limit: 1 },
+    { $project: { "Course Name": "$_id", "_id": 0 } }
+);
+
+// QUERY 7 - Find the class that has been dropped the most number of times.
+db.students.aggregate(
+    { $project: { "courses": 1 } },
+    { $unwind: "$courses" },
+    { $match: { "courses.course_status": "Dropped" } },
+    { $group: { "_id": "$courses.course_title", "count": { $sum: 1 } } },
+    { $sort: { "count": -1 } },
+    { $limit: 1 },
+    { $project: { "Course Name": "$_id", "_id": 0 } }
+);
+
+// QUERY 8 - Find the number of completed classes per class type.
+db.students.aggregate(
+    { $project: { "courses": 1 } },
+    { $unwind: "$courses" },
+    { $match: { "courses.course_status": "Complete" } },
+    { $project: { "Class Type": { $substr: ["$courses.course_code", 0, 1] } } },
+    { $group: { "_id": "$Class Type", "count": { $sum: 1 } } },
+    { $project: { "_id": 0, "Class Type": "$_id", "count": 1 } }
+);
+
+// QUERY 9 - Create a new field named "hobbyist" that indicates whether or not a student has 3 or more hobbies.
+db.students.aggregate(
+    { $project: { "hobbyist": { $gte: [{$size: "$hobbies"}, 3]},
+                  "home_city": 1,
+                  "first_name": 1,
+                  "hobbies": 1,
+                  "favorite_os": 1,
+                  "laptop_cost": 1,
+                  "courses": 1 } }
+).pretty();
+
+// QUERY 10 - Create a new field that shows the number of completed courses per student.
+db.students.aggregate(
+    { $project: { "completed_courses": {$size: {$filter: {input: "$courses", as: "course", cond:{$eq: [{$strcasecmp: ["$$course.course_status", "Complete"]}, 0]}}}},
+                  "home_city": 1,
+                  "first_name": 1,
+                  "hobbies": 1,
+                  "favorite_os": 1,
+                  "laptop_cost": 1,
+                  "courses": 1 } }
+).pretty();
+
+
+// QUERY 11 - Create a new grouping for students, to display only the first name, the GPA and the number of completed and dropped classes.
+db.students.aggregate(
+    { $project: { "first_name": 1,
+                  "GPA": { $avg: "$courses.grade" },
+                  "classesInProgress": {$size: {$filter: {input: "$courses", as: "course", cond:{$eq: [{$strcasecmp: ["$$course.course_status", "In Progress"]}, 0]}}}},
+                  "droppedClasses": {$size: {$filter: {input: "$courses", as: "course", cond:{$eq: [{$strcasecmp: ["$$course.course_status", "Dropped"]}, 0]}}}}} }
 );
