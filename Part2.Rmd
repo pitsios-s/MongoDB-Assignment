@@ -101,7 +101,7 @@ languages = c()
 while(mongo.cursor.next(cursor)) {
   current_row_number <- current_row_number + 1
   current_row <- mongo.cursor.value(cursor)
-  
+
   names[current_row_number] <- mongo.bson.value(current_row, "name")
   ages[current_row_number] <- mongo.bson.value(current_row, "age")
   languages[current_row_number] <- mongo.bson.value(current_row, "language")
