@@ -11,17 +11,17 @@ db.students.find(
 
 // QUERY 2 - Count how many students are enrolled from each city.
 db.students.aggregate(
-    { $group: { _id: "$home_city", num_of_students: { $sum: 1 } } }
+    { $group: { "_id": "$home_city", "num_of_students": { $sum: 1 } } }
 );
 
 // QUERY 3 - Find the most popular hobby/hobbies
 db.students.aggregate(
     { $unwind: "$hobbies" },
     { $group: { "_id": "$hobbies", "num_of_students": { $sum: 1 } } },
-    { $group: { "_id": "$num_of_students", "hobbies": { $addToSet: "$_id" } } },
+    { $group: { "_id": "$num_of_students", "most_popular_hobbies": { $addToSet: "$_id" } } },
     { $sort: { "_id": -1} },
     { $limit: 1},
-    { $project: { "_id": 0, "hobbies": 1 } }
+    { $project: { "_id": 0, "most_popular_hobbies": 1 } }
 );
 
 // QUERY 4 - Find the GPA of the best student.
@@ -49,7 +49,7 @@ db.students.aggregate(
     { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": {$first: "$first_name"} } },
     { $sort: { "tens": -1 } },
     { $limit: 1 },
-    { $project: { "_id": 1, "First Name": "$first_name" } }
+    { $project: { "_id": 1, "first_name": 1 } }
 );
 
 // QUERY 6 - Find the class with the highest average GPA.
@@ -60,7 +60,7 @@ db.students.aggregate(
     { $group: { "_id": "$courses.course_title", "GPA": { $avg: "$courses.grade" } } },
     { $sort: { "GPA": -1 } },
     { $limit: 1 },
-    { $project: { "Course Name": "$_id", "_id": 0 } }
+    { $project: { "class_name": "$_id", "_id": 0 } }
 );
 
 // QUERY 7 - Find the class that has been dropped the most number of times.
@@ -71,7 +71,7 @@ db.students.aggregate(
     { $group: { "_id": "$courses.course_title", "count": { $sum: 1 } } },
     { $sort: { "count": -1 } },
     { $limit: 1 },
-    { $project: { "Course Name": "$_id", "_id": 0 } }
+    { $project: { "class_name": "$_id", "_id": 0 } }
 );
 
 // QUERY 8 - Find the number of completed classes per class type.
@@ -79,14 +79,14 @@ db.students.aggregate(
     { $project: { "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Complete" } },
-    { $project: { "Class Type": { $substr: ["$courses.course_code", 0, 1] } } },
-    { $group: { "_id": "$Class Type", "count": { $sum: 1 } } },
-    { $project: { "_id": 0, "Class Type": "$_id", "count": 1 } }
+    { $project: { "class_type": { $substr: ["$courses.course_code", 0, 1] } } },
+    { $group: { "_id": "$class_type", "count": { $sum: 1 } } },
+    { $project: { "_id": 0, "class_type": "$_id", "count": 1 } }
 );
 
 // QUERY 9 - Create a new field named "hobbyist" that indicates whether or not a student has 3 or more hobbies.
 db.students.aggregate(
-    { $project: { "hobbyist": { $gte: [{$size: "$hobbies"}, 3]},
+    { $project: { "hobbyist": { $gte: [ { $size: "$hobbies" }, 3 ] },
                   "home_city": 1,
                   "first_name": 1,
                   "hobbies": 1,
@@ -135,4 +135,4 @@ db.students.aggregate(
                   "maxGrade": 1,
                   "minGrade": 1} },
     { $out: "course_statistics"}
-).pretty();
+);
