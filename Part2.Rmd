@@ -117,9 +117,6 @@ people
 
 ## Question 12
 ```{r}
-# Install package ncvreg that contains the "heart" data frame.
-# install.packages("ncvreg")
-library(ncvreg)
 library(jsonlite)
 
 # Function that stores the contents of the "heart" dataframe into MongoDB.
@@ -130,8 +127,15 @@ save_heart_data_to_mongo <- function(df, namespace) {
   }
 }
 
+
+# Get the heart dataset.
+heart_names <- c("age", "sex", "chest_pain", "blood_pressure", "serum_cholestoral", "fasting_blood_sugar", "electrocardiographic_results", "max_heart_rate", "exercise_induced_angina", "oldpeak", "slope", "num_of_major_vessels", "thal", "heart_disease")
+
+heart <- read.table(file = "http://archive.ics.uci.edu/ml/machine-learning-databases/statlog/heart/heart.dat", header = F, col.names = heart_names)
+
+heart[, 14] <- ifelse(heart[, 14] == 2, TRUE, FALSE)
+
 # Call the function above.
-data(heart)
 save_heart_data_to_mongo(heart, "r.heart")
 ```
 
