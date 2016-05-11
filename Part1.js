@@ -6,37 +6,41 @@ use test;
 
 // QUERY 1 - Find the number of students that are currently taking at least 1 class.
 db.students.find(
-    {"courses.course_status": "In Progress"}
+    { "courses.course_status": "In Progress" }
 ).count();
 
 // QUERY 2 - Count how many students are enrolled from each city.
 db.students.aggregate(
+    { $project: { "home_city": 1 } },
     { $group: { "_id": "$home_city", "num_of_students": { $sum: 1 } } }
 );
 
 // QUERY 3 - Find the most popular hobby/hobbies
 db.students.aggregate(
+    { $project: { "hobbies": 1 } },
     { $unwind: "$hobbies" },
     { $group: { "_id": "$hobbies", "num_of_students": { $sum: 1 } } },
     { $group: { "_id": "$num_of_students", "most_popular_hobbies": { $addToSet: "$_id" } } },
-    { $sort: { "_id": -1} },
-    { $limit: 1},
-    { $project: { "_id": 0, "most_popular_hobbies": 1 } }
+    { $sort: { "_id": -1 } },
+    { $limit: 1 },
+    { $project: { "_id": 0, "hobby": "$most_popular_hobbies" } },
+    { $unwind: "$hobby" }
 );
 
 // QUERY 4 - Find the GPA of the best student.
 db.students.aggregate(
+    { $project: { "courses": 1 } },
     { $unwind: "$courses" },
-    { $match: { "courses.course_status": "Complete"} },
+    { $match: { "courses.course_status": "Complete" } },
     { $group: { "_id": "$_id", "GPA": { $avg: "$courses.grade" } } },
-    { $project: {"Highest GPA": "$GPA", "_id": 0  } },
-    { $sort: { "Highest GPA": -1} },
+    { $project: { "Highest GPA": "$GPA", "_id": 0  } },
+    { $sort: { "Highest GPA": -1 } },
     { $limit: 1 }
 );
 
 // An alternative of the above is the following.
 db.students.aggregate(
-    { $project: { "GPA": { $avg: "$courses.grade" }, "_id": 0} },
+    { $project: { "GPA": { $avg: "$courses.grade" }, "_id": 0 } },
     { $sort: { "GPA": -1 } },
     { $limit: 1 }
 );
@@ -46,7 +50,7 @@ db.students.aggregate(
     { $project: { "_id": 1, "first_name": 1, "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.grade": 10 } },
-    { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": {$first: "$first_name"} } },
+    { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": {$first: "$first_name" } } },
     { $sort: { "tens": -1 } },
     { $limit: 1 },
     { $project: { "_id": 1, "first_name": 1 } }
@@ -79,7 +83,7 @@ db.students.aggregate(
     { $project: { "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Complete" } },
-    { $project: { "class_type": { $substr: ["$courses.course_code", 0, 1] } } },
+    { $project: { "class_type": { $substr: [ "$courses.course_code", 0, 1 ] } } },
     { $group: { "_id": "$class_type", "count": { $sum: 1 } } },
     { $project: { "_id": 0, "class_type": "$_id", "count": 1 } }
 );
@@ -124,15 +128,15 @@ db.students.aggregate(
                 "numberOfDropouts": { $sum: { $cond: { if: { $eq: [ { $strcasecmp: [ "$courses.course_status", "Dropped" ] }, 0 ] }, then: 1, else: 0 } } },
                 "numberOfTimesCompleted": { $sum: { $cond: { if: { $eq: [ { $strcasecmp: [ "$courses.course_status", "Complete" ] }, 0 ] }, then: 1, else: 0 } } },
                 "currentlyRegistered": { $addToSet: { $cond: { if: { $eq: [ { $strcasecmp: [ "$courses.course_status", "In Progress" ] }, 0 ] }, then: "$_id", else: null } } },
-                "avgGrade": {$avg: "$courses.grade" },
-                "maxGrade": {$max: "$courses.grade" },
-                "minGrade": {$min: "$courses.grade" } } },
+                "avgGrade": { $avg: "$courses.grade" },
+                "maxGrade": { $max: "$courses.grade" },
+                "minGrade": { $min: "$courses.grade" } } },
     { $project: { "course_title": 1,
                   "numberOfDropouts": 1,
                   "numberOfTimesCompleted": 1,
-                  "currentlyRegistered": {$setDifference: [ "$currentlyRegistered", [null] ] },
+                  "currentlyRegistered": { $setDifference: [ "$currentlyRegistered", [ null ] ] },
                   "avgGrade": 1,
                   "maxGrade": 1,
-                  "minGrade": 1} },
+                  "minGrade": 1 } },
     { $out: "course_statistics"}
 );
