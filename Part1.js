@@ -38,54 +38,74 @@ db.students.aggregate(
     { $limit: 1 }
 );
 
-// An alternative of the above is the following.
+// An alternative approach of the above is the following.
 db.students.aggregate(
     { $project: { "GPA": { $avg: "$courses.grade" }, "_id": 0 } },
     { $sort: { "GPA": -1 } },
     { $limit: 1 }
 );
 
-// QUERY 5 - Find the student with the largest number of 10's.
+// QUERY 5 - Find the student(s) with the largest number of 10's.
 db.students.aggregate(
     { $project: { "_id": 1, "first_name": 1, "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.grade": 10 } },
-    { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": {$first: "$first_name" } } },
-    { $sort: { "tens": -1 } },
+    { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": { $first: "$first_name" } } },
+    { $group: { "_id": "$tens", "student": { $addToSet: { "id": "$_id", "first_name": "$first_name" } } } },
+    { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $project: { "_id": 1, "first_name": 1 } }
+    { $unwind: "$student" },
+    { $project: { "_id": 0, "student": 1 } }
 );
 
-// QUERY 6 - Find the class with the highest average GPA.
+// QUERY 6 - Find the class(es) with the highest average GPA.
 db.students.aggregate(
     { $project: { "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Complete" } },
-    { $group: { "_id": "$courses.course_title", "GPA": { $avg: "$courses.grade" } } },
-    { $sort: { "GPA": -1 } },
+    { $group: { "_id": "$courses.course_title", "class_gpa": { $avg: "$courses.grade" } } },
+    { $group: { "_id": "$class_gpa", "class_name": { $addToSet: "$_id" } } },
+    { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $project: { "class_name": "$_id", "_id": 0 } }
+    { $unwind: "$class_name" },
+    { $project: { "class_name": 1, "_id": 0 } }
 );
 
-// QUERY 7 - Find the class that has been dropped the most number of times.
+// QUERY 7 - Find the class(es) that has(have) been dropped the most number of times.
 db.students.aggregate(
     { $project: { "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Dropped" } },
     { $group: { "_id": "$courses.course_title", "count": { $sum: 1 } } },
-    { $sort: { "count": -1 } },
+    { $group: { "_id": "$count", "class_name": { $addToSet: "$_id" } } },
+    { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $project: { "class_name": "$_id", "_id": 0 } }
+    { $unwind: "$class_name"},
+    { $project: { "class_name": 1, "_id": 0 } }
 );
 
 // QUERY 8 - Find the number of completed classes per class type.
+// This question can have a double meaning:
+// 1) How many times a class type have been completed by a student
+// 2) The number of unique courses of a given course type, that have been completed by at least one student.
+// Since description is ambigious, we will give both approaches.
+
+// (1)
 db.students.aggregate(
     { $project: { "courses": 1 } },
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Complete" } },
-    { $project: { "class_type": { $substr: [ "$courses.course_code", 0, 1 ] } } },
-    { $group: { "_id": "$class_type", "count": { $sum: 1 } } },
+    { $group: { "_id": { $substr: [ "$courses.course_code", 0, 1 ] }, "count": { $sum: 1 } } },
     { $project: { "_id": 0, "class_type": "$_id", "count": 1 } }
+);
+
+// (2)
+db.students.aggregate(
+    { $project: { "courses": 1 } },
+    { $unwind: "$courses" },
+    { $match: { "courses.course_status": "Complete" } },
+    { $group: { "_id": { $substr: [ "$courses.course_code", 0, 1 ] }, "count": { $addToSet: "$courses.course_title" } } },
+    { $project: { "_id": 0, "class_type": "$_id", "count": { $size: "$count" } } }
 );
 
 // QUERY 9 - Create a new field named "hobbyist" that indicates whether or not a student has 3 or more hobbies.
@@ -138,5 +158,5 @@ db.students.aggregate(
                   "avgGrade": 1,
                   "maxGrade": 1,
                   "minGrade": 1 } },
-    { $out: "course_statistics"}
+    { $out: "course_statistics" }
 );
