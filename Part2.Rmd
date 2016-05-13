@@ -119,24 +119,19 @@ people
 ```{r}
 library(jsonlite)
 
-# Function that stores the contents of the "heart" dataframe into MongoDB.
-save_heart_data_to_mongo <- function(df, namespace) {
+# Function that stores the contents of a dataframe into MongoDB.
+save_data_frame_to_mongo <- function(df, namespace) {
   for (i in 1: nrow(df)) {
     dataRow <- toJSON(df[i, ])[1]
     mongo.insert(mongo, namespace, mongo.bson.from.JSON(substr(dataRow, 2, nchar(dataRow) - 1)))
   }
 }
 
-
-# Get the heart dataset.
-heart_names <- c("age", "sex", "chest_pain", "blood_pressure", "serum_cholestoral", "fasting_blood_sugar", "electrocardiographic_results", "max_heart_rate", "exercise_induced_angina", "oldpeak", "slope", "num_of_major_vessels", "thal", "heart_disease")
-
-heart <- read.table(file = "http://archive.ics.uci.edu/ml/machine-learning-databases/statlog/heart/heart.dat", header = F, col.names = heart_names)
-
-heart[, 14] <- ifelse(heart[, 14] == 2, TRUE, FALSE)
-
-# Call the function above.
-save_heart_data_to_mongo(heart, "r.heart")
+# Load mtcars dataset into MongoDB.
+data(mtcars)
+mtcars$name <- rownames(mtcars)
+rownames(mtcars) <- 1:nrow(mtcars)
+save_data_frame_to_mongo(mtcars, "r.mtcars")
 ```
 
 ## Question 13
