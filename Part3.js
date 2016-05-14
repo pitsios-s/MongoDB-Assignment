@@ -70,11 +70,11 @@ var reduceFunction2 = function(key, values) {
   }
 
   return reducedValue;
-}
+};
 
 var finalizeFunction2 = function(key, reducedValue) {
   return reducedValue.grade / reducedValue.count;
-}
+};
 
 db.students.mapReduce(
   mapFunction2,

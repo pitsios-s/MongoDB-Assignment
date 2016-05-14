@@ -20,11 +20,11 @@ db.students.aggregate(
     { $project: { "hobbies": 1 } },
     { $unwind: "$hobbies" },
     { $group: { "_id": "$hobbies", "num_of_students": { $sum: 1 } } },
-    { $group: { "_id": "$num_of_students", "most_popular_hobbies": { $addToSet: "$_id" } } },
+    { $group: { "_id": "$num_of_students", "hobbies": { $addToSet: "$_id" } } },
     { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $unwind: "$hobby" },
-    { $project: { "_id": 0, "hobby": "$most_popular_hobbies" } }
+    { $unwind: "$hobbies" },
+    { $project: { "_id": 0, "hobby": "$hobbies" } }
 );
 
 // QUERY 4 - Find the GPA of the best student.
@@ -51,11 +51,11 @@ db.students.aggregate(
     { $unwind: "$courses" },
     { $match: { "courses.grade": 10 } },
     { $group: { "_id": "$_id", "tens": { $sum: 1 }, "first_name": { $first: "$first_name" } } },
-    { $group: { "_id": "$tens", "student": { $addToSet: { "id": "$_id", "first_name": "$first_name" } } } },
+    { $group: { "_id": "$tens", "students": { $addToSet: { "id": "$_id", "first_name": "$first_name" } } } },
     { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $unwind: "$student" },
-    { $project: { "_id": 0, "student": 1 } }
+    { $unwind: "$students" },
+    { $project: { "_id": 0, "student": "$students" } }
 );
 
 // QUERY 6 - Find the class(es) with the highest average GPA.
