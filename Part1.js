@@ -23,8 +23,8 @@ db.students.aggregate(
     { $group: { "_id": "$num_of_students", "most_popular_hobbies": { $addToSet: "$_id" } } },
     { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $project: { "_id": 0, "hobby": "$most_popular_hobbies" } },
-    { $unwind: "$hobby" }
+    { $unwind: "$hobby" },
+    { $project: { "_id": 0, "hobby": "$most_popular_hobbies" } }
 );
 
 // QUERY 4 - Find the GPA of the best student.
