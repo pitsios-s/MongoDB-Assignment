@@ -1,8 +1,9 @@
 //-------------------- MAP-REDUCE JOB 1 --------------------//
 
-stop_words = ['of', 'and', 'a', 'an', 'the', 'in', 'on', 'for']
-
 var mapFunction1 = function() {
+
+  // A list of stopwords to ingore in word count.
+  var stop_words = ['of', 'and', 'a', 'an', 'the', 'in', 'on', 'for']
 
   // Loop for each course of the current student.
   for (var i = 0; i < this.courses.length; i++) {

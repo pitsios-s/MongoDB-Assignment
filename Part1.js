@@ -33,9 +33,9 @@ db.students.aggregate(
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Complete" } },
     { $group: { "_id": "$_id", "GPA": { $avg: "$courses.grade" } } },
-    { $project: { "Highest GPA": "$GPA", "_id": 0  } },
-    { $sort: { "Highest GPA": -1 } },
-    { $limit: 1 }
+    { $sort: { "GPA": -1 } },
+    { $limit: 1 },
+    { $project: { "GPA": 1, "_id": 0  } }
 );
 
 // An alternative approach of the above is the following.
@@ -64,11 +64,11 @@ db.students.aggregate(
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Complete" } },
     { $group: { "_id": "$courses.course_title", "class_gpa": { $avg: "$courses.grade" } } },
-    { $group: { "_id": "$class_gpa", "class_name": { $addToSet: "$_id" } } },
+    { $group: { "_id": "$class_gpa", "classes": { $addToSet: "$_id" } } },
     { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $unwind: "$class_name" },
-    { $project: { "class_name": 1, "_id": 0 } }
+    { $unwind: "$classes" },
+    { $project: { "class_name": "$classes", "_id": 0 } }
 );
 
 // QUERY 7 - Find the class(es) that has(have) been dropped the most number of times.
@@ -77,11 +77,11 @@ db.students.aggregate(
     { $unwind: "$courses" },
     { $match: { "courses.course_status": "Dropped" } },
     { $group: { "_id": "$courses.course_title", "count": { $sum: 1 } } },
-    { $group: { "_id": "$count", "class_name": { $addToSet: "$_id" } } },
+    { $group: { "_id": "$count", "classes": { $addToSet: "$_id" } } },
     { $sort: { "_id": -1 } },
     { $limit: 1 },
-    { $unwind: "$class_name"},
-    { $project: { "class_name": 1, "_id": 0 } }
+    { $unwind: "$classes"},
+    { $project: { "class_name": "$classes", "_id": 0 } }
 );
 
 // QUERY 8 - Find the number of completed classes per class type.
